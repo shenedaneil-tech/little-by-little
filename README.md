@@ -69,10 +69,12 @@ node tests/route-engine.test.mjs
 node tests/location.test.cjs
 node tests/nearby.test.cjs
 node tests/motion.test.cjs
+node tests/storage.test.cjs
+node tests/public-page.test.cjs
 ```
 
 ## Deployment
 
-This is the source for an existing private ChatGPT Site. `.openai/hosting.json` preserves its project identity and D1 binding. The Sites workflow builds the Worker, applies pending migrations, and deploys a saved source version. A GitHub upload by itself does not deploy or sync future changes to the live site.
+This is the source for a public ChatGPT Site with account-private planner data. `.openai/hosting.json` preserves its project identity and D1 binding. The Sites workflow builds the Worker, applies pending migrations, and deploys a saved source version. A GitHub upload by itself does not deploy or sync future changes to the live site.
 
 The GitHub copy does not include dependency folders, build output, local databases, credentials, or runtime caches. Keep those excluded when making future commits. No new license is assigned by this export; retained dependency and starter license notices remain in their respective files.
