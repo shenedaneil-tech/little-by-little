@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),ts=require('typescript');
+const {DatabaseSync}=require('node:sqlite');
+const db=new DatabaseSync(':memory:');db.exec(fs.readFileSync('drizzle/0000_certain_cannonball.sql','utf8'));
+let user={userId:'owner-a'};
+const env={DB:{prepare(sql){let args=[];return {bind(...a){args=a;return this},async first(){return db.prepare(sql).get(...args)||null},async run(){let r=db.prepare(sql).run(...args);return {meta:{changes:Number(r.changes)}}}}}}};
+let src=fs.readFileSync('app/api/planner/route.ts','utf8').replace(/import[^;]+;/g,'');const js=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const context={exports:{},env,getChatGPTUser:async()=>user,Response,Request,URL,console};vm.runInNewContext(js,context);const api=context.exports;
+const state={tasks:[{id:'a',title:'Keep me',duration:30,date:'2026-11-01',at:600,pinned:true}],events:[],dump:'A thought',start:'09:00',end:'21:00',buffer:10};
+const request=(revision,s=state,origin='https://planner.test')=>new Request('https://planner.test/api/planner',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify({revision,state:s})});
+(async()=>{
+assert.equal((await api.POST(request(0))).status,200);
+assert.equal((await (await api.GET()).json()).state.tasks[0].title,'Keep me');
+assert.equal((await api.POST(request(0))).status,409);
+assert.equal((await api.POST(request(1,state,'https://evil.test'))).status,403);
+assert.equal((await api.POST(request(1,{...state,tasks:[{...state.tasks[0],at:1430}]}))).status,400);
+user={userId:'owner-b'};assert.equal((await (await api.GET()).json()).state,null);
+assert.equal((await api.POST(request(0,{...state,dump:'Separate account'}))).status,200);
+user={userId:'owner-a'};assert.equal((await (await api.GET()).json()).state.dump,'A thought');
+user=null;assert.equal((await api.GET()).status,401);assert.equal((await api.POST(request(1))).status,401);
+console.log('PASS: database persistence, account isolation, revision conflicts, origin validation, unauthenticated access, time bounds');
+})().catch(e=>{console.error(e);process.exitCode=1});
