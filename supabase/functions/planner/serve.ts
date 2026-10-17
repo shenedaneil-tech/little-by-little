@@ -1,6 +1,6 @@
 // This function verifies access tokens itself, including new publishable-key projects.
 Deno.serve(async (request: Request)=>{
- const allowedOrigin=Deno.env.get('APP_ORIGIN');
+ const allowedOrigin=Deno.env.get('APP_ORIGIN')||'https://shenedaneil-tech.github.io';
  const origin=request.headers.get('origin');
  if(!allowedOrigin||origin!==allowedOrigin)return Response.json({error:'Origin not allowed'},{status:403});
  const cors={'Access-Control-Allow-Origin':allowedOrigin,'Access-Control-Allow-Headers':'authorization, apikey, content-type, x-client-info','Access-Control-Allow-Methods':'GET, POST, OPTIONS','Vary':'Origin','Cache-Control':'private, no-store'};
@@ -9,7 +9,9 @@ Deno.serve(async (request: Request)=>{
  const authorization=request.headers.get('authorization')||'';
  if(!authorization.startsWith('Bearer '))return finish(Response.json({error:'Sign in to access your planner.'},{status:401}));
  try{
-  const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:authorization}},auth:{persistSession:false,autoRefreshToken:false}});
+  const keys=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}');
+  const publicKey=keys.default||Deno.env.get('SUPABASE_ANON_KEY');
+  const client=createClient(Deno.env.get('SUPABASE_URL')!,publicKey!,{global:{headers:{Authorization:authorization}},auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await client.auth.getUser(authorization.slice(7));
   if(error||!data.user)return finish(Response.json({error:'Please sign in again.'},{status:401}));
   // Bound request size even when Content-Length is missing. Avoid unbounded parsing.
