@@ -17,17 +17,19 @@ function edit(id) {
     main: false
   };
   open(
-    `<form id="taskform"><h2>${id ? 'A little adjustment' : 'One little task'}</h2><label>What would you like to do?</label><input name="title" required maxlength="180" value="${esc(t.title)}" placeholder="Pick up my shirt transfers…"><label>Store, place, or address</label><div class="row"><input id="address" name="location" style="flex:1;min-width:150px" autocomplete="off" value="${esc(t.location)}" placeholder="Try Target, Michaels, DTF Jersey…" aria-describedby="address-status">${state.startingCoords ? '<button type="button" class="soft" id="pick-home">Home</button>' : ''}</div><div id="address-results"></div><p id="address-status" class="help">Type a store name and choose the right branch. Search uses OpenStreetMap listings.</p><div class="note" id="place-eta">${t.locationCoords ? 'Choose “Update from my location” for a fresh driving estimate.' : 'Choose a place to see the drive from your current location.'}</div><button type="button" class="soft" id="update-location" style="margin-top:8px">⌖ Update from my location</button><p class="help">Location is used with your permission. Nearby planning can rearrange flexible stops while this page is visible.</p><div class="fields"><div><label>Time needed at the task</label><input name="duration" type="number" min="5" max="720" value="${t.duration}" required></div><div><label>Importance</label><select name="priority">${[1, 2, 3].map(n => `<option value="${n}" ${t.priority == n ? 'selected' : ''}>${['', 'Essential', 'Important', 'Whenever'][n]}</option>`).join('')}</select></div><div><label>Day</label><input type="date" name="date" value="${t.date}" required></div><div><label>Specific time (optional)</label><input type="time" name="time" value="${t.pinned && t.at != null ? clock(t.at) : ''}"></div></div><label><input type="checkbox" name="main" style="width:auto" ${t.main ? 'checked' : ''}> My main priority</label><details><summary>Opening hours &amp; extra details</summary><p class="help">Hours for this visit day. Business hours aren’t automatically verified.</p><div class="fields"><div><label>Opens</label><input type="time" name="opens" value="${t.opens || ''}"></div><div><label>Closes</label><input type="time" name="closes" value="${t.closes || ''}"></div></div><label><input type="checkbox" name="closed" style="width:auto" ${t.closed ? 'checked' : ''}> Closed this day</label><label><input type="checkbox" name="noHours" style="width:auto" ${t.noHours ? 'checked' : ''}> No opening-hours restriction</label><label>Deadline</label><input type="date" name="deadline" value="${t.deadline || ''}"><label>Next step / stopping point</label><textarea class="field" rows="2" name="note">${esc(t.note)}</textarea></details><div class="dialog-actions">${id ? '<button type="button" id="delete-task">Delete</button>' : ''}<button type="button" onclick="closeModal()">Cancel</button><button class="primary">Save task</button></div></form>`
+    `<form id="taskform"><h2>${id ? 'A little adjustment' : 'One little task'}</h2><label>What would you like to do?</label><input name="title" required maxlength="180" value="${esc(t.title)}" placeholder="Pick up my shirt transfers…"><label>Store, place, or address</label><div class="row"><input id="address" name="location" style="flex:1;min-width:150px" autocomplete="off" value="${esc(t.location)}" placeholder="Try Target, Michaels, DTF Jersey…" aria-describedby="address-status">${state.startingCoords ? '<button type="button" class="soft" id="pick-home">Home</button>' : ''}</div><div id="address-results"></div><p id="address-status" class="help">Type a store name and choose the right branch. Search uses OpenStreetMap listings.</p><div class="note" id="place-eta">${t.locationCoords ? 'Choose “Update from my location” for a fresh driving estimate.' : 'Choose a place to see the drive from your current location.'}</div><button type="button" class="soft" id="update-location" style="margin-top:8px">⌖ Update from my location</button><p class="help">Location is used with your permission. Nearby planning can rearrange flexible stops while this page is visible.</p><div class="fields"><div><label>Time needed at the task</label><input name="duration" type="number" min="5" max="720" value="${t.duration}" required></div><div><label>Importance</label><select name="priority">${[1, 2, 3].map(n => `<option value="${n}" ${t.priority == n ? 'selected' : ''}>${['', 'Essential', 'Important', 'Whenever'][n]}</option>`).join('')}</select></div><div><label>Day</label><input type="date" name="date" value="${t.date}" required></div><div><label>Specific time (optional)</label><input type="time" name="time" value="${t.pinned && t.at != null ? clock(t.at) : ''}"></div></div><label><input type="checkbox" name="main" style="width:auto" ${t.main ? 'checked' : ''}> My main priority</label>${hoursBlockHtml(t)}<details><summary>Deadline &amp; notes</summary><label>Deadline</label><input type="date" name="deadline" value="${t.deadline || ''}"><label>Next step / stopping point</label><textarea class="field" rows="2" name="note">${esc(t.note)}</textarea></details><div class="dialog-actions">${id ? '<button type="button" id="delete-task">Delete</button>' : ''}<button type="button" onclick="closeModal()">Cancel</button><button class="primary">Save task</button></div></form>`
   );
   const input = $('#address');
   writeCoords(input, t.locationCoords);
   input.dataset.name = t.placeName || '';
   setupAddressSearch();
   setupSimplePlace(t);
+  setupHours();
   $('#taskform').onsubmit = e => {
     e.preventDefault();
     const f = new FormData(e.target),
-      coords = readCoords(input);
+      coords = readCoords(input),
+      hrs = hoursFromForm(f);
     let x = {
       ...t,
       id: id || crypto.randomUUID(),
@@ -44,10 +46,10 @@ function edit(id) {
       pinned: !!f.get('time'),
       at: f.get('time') ? mins(f.get('time')) : null,
       needsTravel: !!coords,
-      opens: f.get('opens'),
-      closes: f.get('closes'),
-      closed: f.has('closed'),
-      noHours: f.has('noHours'),
+      opens: hrs.opens,
+      closes: hrs.closes,
+      closed: hrs.closed,
+      noHours: hrs.noHours,
       routeVersion: 2,
       travelBefore: Number($('#place-eta').dataset.minutes) || 0,
       travelAfter: 0,
@@ -55,12 +57,11 @@ function edit(id) {
       travelSource: 'OSRM'
     };
     if (!x.title) return;
-    if (x.noHours) {
-      x.opens = '';
-      x.closes = '';
+    const hoursProblem = validateHours(hrs.mode, hrs.opens, hrs.closes);
+    if (hoursProblem) {
+      setupHours.showProblem(hoursProblem);
+      return toast(hoursProblem);
     }
-    if (x.opens && x.closes && mins(x.closes) <= mins(x.opens))
-      return toast('Closing time must follow opening time.');
     if (x.at != null) {
       if (x.at + x.duration > 1440) return toast('This task extends past midnight.');
       const hours = hoursIssue(x, x.at);
@@ -74,6 +75,8 @@ function edit(id) {
       if (clash) return toast('This overlaps with ' + clash.title + '.');
     }
     snapshot();
+    if (x.location && hrs.mode !== 'closed')
+      rememberHours(placeKey(x.placeName || x.location), hrs.opens, hrs.closes);
     if (x.main) state.tasks.filter(v => v.date === x.date).forEach(v => (v.main = false));
     if (id) state.tasks[state.tasks.findIndex(v => v.id === id)] = x;
     else state.tasks.push(x);

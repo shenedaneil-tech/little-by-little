@@ -7,6 +7,7 @@ Live site: https://little-by-little-planner.shenedawatson1.chatgpt.site
 ## Features
 
 - Tasks with priorities, duration estimates, fixed times, deadlines, and notes.
+- Opening hours in one tap: choose Any time, Set hours (with quick presets), or Closed today. Hours are remembered per place and suggested the next time you pick it.
 - A daily timeline with appointments, opening-hour constraints, and driving blocks.
 - Store-name and address search with OpenStreetMap / Photon.
 - Automatic drive estimates from your current location.
@@ -19,7 +20,7 @@ Live site: https://little-by-little-planner.shenedawatson1.chatgpt.site
 
 ## Current limits
 
-Driving estimates use OSRM and exclude live traffic. OpenStreetMap does not list every business. Business hours must be entered for the visit day. Google Calendar live synchronization, closed-page notifications, and background location tracking are not implemented.
+Driving estimates use OSRM and exclude live traffic. OpenStreetMap does not list every business. Business hours are not looked up; enter them for the visit day (remembered hours are only a suggestion, since stores change their hours). Google Calendar live synchronization, closed-page notifications, and background location tracking are not implemented.
 
 Tasks and locations are stored separately in the hosted database or browser; this repository contains source code, not personal planner entries.
 
@@ -70,6 +71,7 @@ node tests/route-engine.test.mjs
 node tests/location.test.cjs
 node tests/nearby.test.cjs
 node tests/motion.test.cjs
+node tests/hours.test.cjs
 ```
 
 ## Deployment

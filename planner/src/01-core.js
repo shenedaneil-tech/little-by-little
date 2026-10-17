@@ -44,7 +44,8 @@ const defaults = {
   dump: '',
   notify: false,
   startingAddress: '',
-  startingCoords: null
+  startingCoords: null,
+  placeHours: {}
 };
 let cloudReady = false,
   cloudRevision = 0,
