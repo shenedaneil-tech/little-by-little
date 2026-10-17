@@ -1,8 +1,10 @@
-# Independent deployment
+# Free hosting deployment
 
-The full app can now run outside ChatGPT hosting using the Render Blueprint in `render.yaml`, Node 24, GitHub sign-in, and a persistent SQLite database. It preserves the existing planner interface and APIs. See [deployment and data-transfer instructions](standalone/DEPLOY.md).
+The current deployment target is **GitHub Pages + Supabase Free**, with private sign-in, persistent task storage, address search and driving estimates. See [free deployment and data-transfer instructions](pages/DEPLOY.md).
 
-**Deployment is prepared, not live yet.** A Render account, paid service with persistent disk, and GitHub OAuth App credentials are required. The existing live site and its data remain available. Use JSON backup/restore to transfer your planner after the new site is running.
+**Setup is prepared; the new website is not live yet.** GitHub Pages is enabled. Supabase must be connected and configured before publication. The workflow skips deployment until the database configuration is present. Free-tier quotas and inactivity pausing apply. No paid Render resources have been created.
+
+The optional paid Render configuration remains under `standalone/` and `render.yaml`; it is not used by the free deployment. The existing ChatGPT-hosted app and its tasks remain available until the new site and backup transfer are verified.
 
 ---
 

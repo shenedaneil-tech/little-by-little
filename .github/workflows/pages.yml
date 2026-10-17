@@ -1,0 +1,66 @@
+name: Publish free planner to GitHub Pages
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'pages/**'
+      - 'planner/**'
+      - 'lib/day-plan.mjs'
+      - 'scripts/build-pages.mjs'
+      - '.github/workflows/pages.yml'
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.config.outputs.configured }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node scripts/build-edge.mjs
+      - run: node --test tests/pages.test.mjs tests/route-engine.test.mjs
+      - name: Check database connection
+        id: config
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync,appendFileSync} from 'node:fs';
+          const config=JSON.parse(readFileSync('pages/config.json','utf8'));
+          const ready=!!((process.env.SUPABASE_URL||config.url)&&(process.env.SUPABASE_PUBLISHABLE_KEY||config.key));
+          appendFileSync(process.env.GITHUB_OUTPUT,'configured='+ready+'\n');
+          if(!ready)console.log('Database connection pending; website deployment skipped.');
+          JS
+      - name: Build configured website
+        if: steps.config.outputs.configured == 'true' 
+        run: node scripts/build-pages.mjs
+        env:
+          REQUIRE_PAGES_CONFIG: '1'
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.config.outputs.configured == 'true'
+        with:
+          path: pages-dist
+  deploy:
+    needs: build
+    if: needs.build.outputs.configured == 'true'
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
