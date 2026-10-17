@@ -1,4 +1,5 @@
 // Core: helpers, app state, saving, undo and toast messages
+const plannerStorage = createPlannerStorage(localStorage, window.PLANNER_USER_KEY);
 const $ = s => document.querySelector(s),
   esc = s =>
     String(s ?? '').replace(
@@ -30,7 +31,7 @@ let motionEnabled = true,
   lastCompleted = null;
 try {
   motionEnabled =
-    localStorage.getItem('lbl-motion') !== 'off' &&
+    plannerStorage.getItem('lbl-motion') !== 'off' &&
     !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 } catch {}
 document.documentElement.dataset.motion = motionEnabled ? 'on' : 'off';
@@ -57,7 +58,7 @@ let cloudReady = false,
   cloudUser = '';
 let state;
 try {
-  state = { ...defaults, ...JSON.parse(localStorage.getItem('lbl-v1') || '{}') };
+  state = { ...defaults, ...JSON.parse(plannerStorage.getItem('lbl-v1') || '{}') };
 } catch {
   state = { ...defaults };
 }
@@ -65,9 +66,9 @@ let lastLocal = JSON.stringify(state);
 const save = () => {
   try {
     const serialized = JSON.stringify(state);
-    if (serialized !== lastLocal && !cloudReady) localStorage.setItem('lbl-cloud-pending', '1');
+    if (serialized !== lastLocal && !cloudReady) plannerStorage.setItem('lbl-cloud-pending', '1');
     lastLocal = serialized;
-    localStorage.setItem('lbl-v1', serialized);
+    plannerStorage.setItem('lbl-v1', serialized);
     $('#saved').textContent = cloudReady ? 'Saving…' : 'Loading saved planner…';
   } catch {
     $('#saved').textContent = 'Storage full — export a backup';

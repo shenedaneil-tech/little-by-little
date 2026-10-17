@@ -11,7 +11,7 @@ function distanceMeters(a, b) {
 function toggleNearby() {
   nearbyEnabled = !nearbyEnabled;
   try {
-    localStorage.setItem('lbl-nearby-enabled', nearbyEnabled ? '1' : '0');
+    plannerStorage.setItem('lbl-nearby-enabled', nearbyEnabled ? '1' : '0');
   } catch {}
   if (nearbyEnabled) startNearbyWatch();
   else {

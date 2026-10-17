@@ -18,7 +18,7 @@ function toggleMotion() {
   }
   motionEnabled = !motionEnabled;
   try {
-    localStorage.setItem('lbl-motion', motionEnabled ? 'on' : 'off');
+    plannerStorage.setItem('lbl-motion', motionEnabled ? 'on' : 'off');
   } catch {}
   document.documentElement.dataset.motion = motionEnabled ? 'on' : 'off';
   syncMotionButtons();

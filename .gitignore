@@ -54,3 +54,11 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+
+# Standalone deployment artifacts and private runtime data
+standalone/generated/
+standalone/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+pages-dist/

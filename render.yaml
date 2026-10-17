@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: little-by-little
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./standalone/Dockerfile
+    healthCheckPath: /healthz
+    numInstances: 1
+    envVars:
+      - key: DB_PATH
+        value: /data/planner.sqlite
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+    disk:
+      name: planner-data
+      mountPath: /data
+      sizeGB: 1

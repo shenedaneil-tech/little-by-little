@@ -22,7 +22,7 @@ function queueCloud() {
   lastQueued = payload;
   cloudDirty = true;
   try {
-    localStorage.setItem('lbl-cloud-pending', '1');
+    plannerStorage.setItem('lbl-cloud-pending', '1');
   } catch {}
   cloudStatus('Saving…');
   clearTimeout(cloudTimer);
@@ -50,8 +50,8 @@ async function pushCloud() {
     if (!r.ok) throw Error(data.error || 'Save failed');
     cloudRevision = data.revision;
     try {
-      localStorage.setItem('lbl-cloud-revision', String(cloudRevision));
-      if (!cloudDirty) localStorage.removeItem('lbl-cloud-pending');
+      plannerStorage.setItem('lbl-cloud-revision', String(cloudRevision));
+      if (!cloudDirty) plannerStorage.removeItem('lbl-cloud-pending');
     } catch {}
     cloudStatus(cloudDirty ? 'Saving…' : 'Saved to your account ✓');
   } catch (e) {
@@ -74,8 +74,8 @@ async function bootCloud() {
     cloudRevision = data.revision;
     cloudUser = data.userKey;
     const marker = 'lbl-migrated-' + cloudUser;
-    const localPending = localStorage.getItem('lbl-cloud-pending') === '1',
-      localRevision = Number(localStorage.getItem('lbl-cloud-revision') || 0);
+    const localPending = plannerStorage.getItem('lbl-cloud-pending') === '1',
+      localRevision = Number(plannerStorage.getItem('lbl-cloud-revision') || 0);
     let needsSave = false;
     if (data.state) {
       if (localPending && localRevision === cloudRevision) {
@@ -83,7 +83,7 @@ async function bootCloud() {
       } else {
         const old = state;
         state = { ...defaults, ...data.state };
-        if (!localStorage.getItem(marker)) {
+        if (!plannerStorage.getItem(marker)) {
           for (const kind of ['tasks', 'events'])
             for (const item of old[kind])
               if (!state[kind].some(t => t.id === item.id)) {
@@ -95,18 +95,18 @@ async function bootCloud() {
             needsSave = true;
           }
         } else if (localPending) {
-          localStorage.setItem('lbl-recovery-copy', JSON.stringify(old));
+          plannerStorage.setItem('lbl-recovery-copy', JSON.stringify(old));
           toast(
             'Loaded your latest account planner. An unsynced device copy is available in My rhythm.'
           );
         }
       }
     } else needsSave = true;
-    localStorage.setItem(marker, '1');
-    localStorage.setItem('lbl-cloud-revision', String(cloudRevision));
+    plannerStorage.setItem(marker, '1');
+    plannerStorage.setItem('lbl-cloud-revision', String(cloudRevision));
     cloudReady = true;
     lastQueued = needsSave ? '' : JSON.stringify(state);
-    if (!needsSave) localStorage.removeItem('lbl-cloud-pending');
+    if (!needsSave) plannerStorage.removeItem('lbl-cloud-pending');
     render();
     if (needsSave) queueCloud();
     else cloudStatus('Saved to your account ✓');
@@ -117,7 +117,7 @@ async function bootCloud() {
     );
   } finally {
     document.body.classList.remove('sync-loading');
-    if (cloudReady && localStorage.getItem('lbl-nearby-enabled') === '1') {
+    if (cloudReady && plannerStorage.getItem('lbl-nearby-enabled') === '1') {
       nearbyEnabled = true;
       startNearbyWatch();
       render();
@@ -144,8 +144,8 @@ $('#saved').onkeydown = e => {
 };
 function resolveCloud() {
   try {
-    localStorage.setItem('lbl-recovery-copy', JSON.stringify(state));
-    localStorage.removeItem('lbl-cloud-pending');
+    plannerStorage.setItem('lbl-recovery-copy', JSON.stringify(state));
+    plannerStorage.removeItem('lbl-cloud-pending');
   } catch {}
   cloudBlocked = false;
   cloudDirty = false;
@@ -167,7 +167,7 @@ window.addEventListener('beforeunload', e => {
   }
 });
 function recovery() {
-  const copy = localStorage.getItem('lbl-recovery-copy');
+  const copy = plannerStorage.getItem('lbl-recovery-copy');
   if (copy) download(copy, 'little-by-little-recovery.json', 'application/json');
   else toast('No recovery copy is needed right now.');
 }

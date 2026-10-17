@@ -1,0 +1,3 @@
+[functions.planner]
+# The handler verifies JWTs with Auth getUser; gateway JWT verification does not support all key formats.
+verify_jwt = false
