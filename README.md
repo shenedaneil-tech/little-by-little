@@ -1,3 +1,11 @@
+# Independent deployment
+
+The full app can now run outside ChatGPT hosting using the Render Blueprint in `render.yaml`, Node 24, GitHub sign-in, and a persistent SQLite database. It preserves the existing planner interface and APIs. See [deployment and data-transfer instructions](standalone/DEPLOY.md).
+
+**Deployment is prepared, not live yet.** A Render account, paid service with persistent disk, and GitHub OAuth App credentials are required. The existing live site and its data remain available. Use JSON backup/restore to transfer your planner after the new site is running.
+
+---
+
 # Little by Little 🌱
 
 A personal daily planner that helps you choose the next task and connect errands into a practical route.
