@@ -1,6 +1,7 @@
 import {createServer} from 'node:http';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,mkdirSync} from 'node:fs';
+import {createRequire} from 'node:module';
 import {dirname,resolve} from 'node:path';
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
 import {context} from './runtime.mjs';
@@ -9,6 +10,7 @@ import * as planner from './generated/planner.mjs';
 import * as addresses from './generated/addresses.mjs';
 import * as journey from './generated/journey.mjs';
 import * as travel from './generated/travel.mjs';
+const {plannerSource}=createRequire(import.meta.url)('../scripts/planner-source.cjs');
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const random=()=>randomBytes(32).toString('base64url');
 const equal=(a,b)=>{if(typeof a!=='string'||typeof b!=='string')return false;const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y)};
@@ -31,7 +33,7 @@ export function createPlannerServer({dbPath=process.env.DB_PATH||'standalone/dat
  const cookie=(name,value,age)=>`${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${secure?'; Secure':''}`;
  const cleanup=()=>{db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());db.prepare('DELETE FROM oauth_states WHERE expires < ?').run(Date.now())};
  const assets={
-  '/app.js':['text/javascript; charset=utf-8',readFileSync('planner/app.js','utf8')],
+  '/app.js':['text/javascript; charset=utf-8',plannerSource()],
   '/account-storage.js':['text/javascript; charset=utf-8',readFileSync('planner/account-storage.js','utf8')],
   '/route-engine.js':['text/javascript; charset=utf-8',readFileSync('lib/day-plan.mjs','utf8').replace('export function buildDayPlan','function buildDayPlan')+'\nglobalThis.DayPlanner={buildDayPlan};']
  };

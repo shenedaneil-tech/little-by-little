@@ -1,8 +1,10 @@
 import {readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node:fs';
+import {createRequire} from 'node:module';
+const {plannerSource}=createRequire(import.meta.url)('./planner-source.cjs');
 const out=process.env.PAGES_OUTPUT||'pages-dist';mkdirSync(out,{recursive:true});
 for(const name of ['index.html','auth.js','transport.js'])copyFileSync('pages/'+name,out+'/'+name);
 copyFileSync('planner/index.html',out+'/planner.html');copyFileSync('planner/account-storage.js',out+'/account-storage.js');
-writeFileSync(out+'/app.js',readFileSync('planner/app.js','utf8').replaceAll("fetch('/api/","plannerFetch('/api/"));
+writeFileSync(out+'/app.js',plannerSource().replaceAll("fetch('/api/","plannerFetch('/api/"));
 writeFileSync(out+'/route-engine.js',readFileSync('lib/day-plan.mjs','utf8').replace('export function buildDayPlan','function buildDayPlan')+'\nglobalThis.DayPlanner={buildDayPlan};');
 const configured=JSON.parse(readFileSync('pages/config.json','utf8'));
 const url=process.env.SUPABASE_URL||configured.url||'',key=process.env.SUPABASE_PUBLISHABLE_KEY||configured.key||'';

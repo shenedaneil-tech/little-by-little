@@ -17,6 +17,7 @@ Live site: https://little-by-little-planner.shenedawatson1.chatgpt.site
 ## Features
 
 - Tasks with priorities, duration estimates, fixed times, deadlines, and notes.
+- Opening hours in one tap: choose Any time, Set hours (with quick presets), or Closed today. Hours are remembered per place and suggested the next time you pick it.
 - A daily timeline with appointments, opening-hour constraints, and driving blocks.
 - Store-name and address search with OpenStreetMap / Photon.
 - Automatic drive estimates from your current location.
@@ -29,7 +30,7 @@ Live site: https://little-by-little-planner.shenedawatson1.chatgpt.site
 
 ## Current limits
 
-Driving estimates use OSRM and exclude live traffic. OpenStreetMap does not list every business. Business hours must be entered for the visit day. Google Calendar live synchronization, closed-page notifications, and background location tracking are not implemented.
+Driving estimates use OSRM and exclude live traffic. OpenStreetMap does not list every business. Business hours are not looked up; enter them for the visit day (remembered hours are only a suggestion, since stores change their hours). Google Calendar live synchronization, closed-page notifications, and background location tracking are not implemented.
 
 Tasks and locations are stored separately in the hosted database or browser; this repository contains source code, not personal planner entries.
 
@@ -37,14 +38,15 @@ Tasks and locations are stored separately in the hosted database or browser; thi
 
 - Vinext / Vite, React, TypeScript, Cloudflare Workers, D1, and Drizzle.
 - `planner/index.html` — interface and responsive styles.
-- `planner/app.js` — interface behavior, sync, geolocation, and animation.
+- `planner/src/` — interface behavior, split into numbered sections (core, planning, nearby, rendering, tasks, reminders/backup, account sync, places, motion). They are joined in file-name order into the single script the page loads.
+- `scripts/planner-source.cjs` — the helper that joins those sections (used by the build and the tests).
 - `lib/day-plan.mjs` — pure scheduling and route-order logic.
 - `app/api/` — authenticated persistence, address search, and routing endpoints.
 - `db/` and `drizzle/` — database schema and migration history.
 - `scripts/embed-planner.mjs` — generates the server-served assets from planner source.
 - `tests/` — persistence, route, location, motion, and nearby-planning checks.
 
-Edit the files under `planner/`, then run `node scripts/embed-planner.mjs`. Do not manually edit the generated `app/planner-assets.ts`.
+Edit `planner/index.html` and the files under `planner/src/`, then run `node scripts/embed-planner.mjs`. Do not manually edit the generated `app/planner-assets.ts`.
 
 ## Local setup
 
@@ -73,12 +75,13 @@ Use the local URL printed by the server. Clean clones use the portable execution
 ## Checks
 
 ```sh
-node --check planner/app.js
+pnpm check:planner
 node tests/planner.test.cjs
 node tests/route-engine.test.mjs
 node tests/location.test.cjs
 node tests/nearby.test.cjs
 node tests/motion.test.cjs
+node tests/hours.test.cjs
 node tests/storage.test.cjs
 node tests/public-page.test.cjs
 ```

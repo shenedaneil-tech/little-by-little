@@ -2,6 +2,7 @@ FROM node:24-bookworm-slim
 WORKDIR /app
 COPY planner ./planner
 COPY lib/day-plan.mjs ./lib/day-plan.mjs
+COPY scripts/planner-source.cjs ./scripts/planner-source.cjs
 COPY app/api ./app/api
 COPY app/route.ts ./app/route.ts
 COPY standalone ./standalone
