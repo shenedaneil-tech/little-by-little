@@ -1,4 +1,4 @@
-const {readFileSync}=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const vm=require('vm'),assert=require('node:assert/strict');
 class Element extends EventTarget{constructor(){super();this.dataset={};this.value='';this.disabled=false;this.isConnected=true;this.textContent=''}}
 const nodes=Object.fromEntries(['address','place-eta','update-location','taskform'].map(id=>[id,new Element()]));let geoMode='allow',calls=[];
 const sandbox={document:{addEventListener(){},querySelectorAll(){return []}},console,Event,Promise,Date,Math,Number,JSON,Error,AbortController,$:s=>nodes[s.slice(1)],livePosition:null,state:{},navigator:{geolocation:{getCurrentPosition(ok,fail){if(geoMode==='allow')ok({coords:{latitude:40.85,longitude:-74.02,accuracy:20},timestamp:Date.now()});else fail({code:1})}}},fetch:async(url,init)=>{calls.push(JSON.parse(init.body));return{ok:true,json:async()=>({minutes:[[0,12],[15,0]]})}}};
