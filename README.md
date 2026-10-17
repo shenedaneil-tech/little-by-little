@@ -27,14 +27,15 @@ Tasks and locations are stored separately in the hosted database or browser; thi
 
 - Vinext / Vite, React, TypeScript, Cloudflare Workers, D1, and Drizzle.
 - `planner/index.html` — interface and responsive styles.
-- `planner/app.js` — interface behavior, sync, geolocation, and animation.
+- `planner/src/` — interface behavior, split into numbered sections (core, planning, nearby, rendering, tasks, reminders/backup, account sync, places, motion). They are joined in file-name order into the single script the page loads.
+- `scripts/planner-source.cjs` — the helper that joins those sections (used by the build and the tests).
 - `lib/day-plan.mjs` — pure scheduling and route-order logic.
 - `app/api/` — authenticated persistence, address search, and routing endpoints.
 - `db/` and `drizzle/` — database schema and migration history.
 - `scripts/embed-planner.mjs` — generates the server-served assets from planner source.
 - `tests/` — persistence, route, location, motion, and nearby-planning checks.
 
-Edit the files under `planner/`, then run `node scripts/embed-planner.mjs`. Do not manually edit the generated `app/planner-assets.ts`.
+Edit `planner/index.html` and the files under `planner/src/`, then run `node scripts/embed-planner.mjs`. Do not manually edit the generated `app/planner-assets.ts`.
 
 ## Local setup
 
@@ -63,7 +64,7 @@ Use the local URL printed by the server. Clean clones use the portable execution
 ## Checks
 
 ```sh
-node --check planner/app.js
+pnpm check:planner
 node tests/planner.test.cjs
 node tests/route-engine.test.mjs
 node tests/location.test.cjs
