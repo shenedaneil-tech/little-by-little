@@ -3,7 +3,7 @@ import {createRequire} from 'node:module';
 import {createHash} from 'node:crypto';
 const {plannerSource}=createRequire(import.meta.url)('./planner-source.cjs');
 const out=process.env.PAGES_OUTPUT||'pages-dist';mkdirSync(out,{recursive:true});
-for(const name of ['index.html','auth.js','transport.js'])copyFileSync('pages/'+name,out+'/'+name);
+for(const name of ['index.html','auth.js','transport.js','sw.js','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'])copyFileSync('pages/'+name,out+'/'+name);
 copyFileSync('planner/index.html',out+'/planner.html');copyFileSync('planner/account-storage.js',out+'/account-storage.js');
 writeFileSync(out+'/app.js',plannerSource().replaceAll("fetch('/api/","plannerFetch('/api/"));
 writeFileSync(out+'/route-engine.js',readFileSync('lib/day-plan.mjs','utf8').replace('export function buildDayPlan','function buildDayPlan')+'\nglobalThis.DayPlanner={buildDayPlan};');
@@ -19,7 +19,7 @@ writeFileSync(out+'/.nojekyll','');
 // GitHub Pages caches scripts for ten minutes. Give each complete release a
 // content-based URL so a fresh page cannot mix older scripts with newer markup.
 const hash=createHash('sha256');
-for(const name of ['index.html','planner.html','auth.js','transport.js','account-storage.js','app.js','route-engine.js','config.js'])hash.update(name).update(readFileSync(out+'/'+name));
+for(const name of ['index.html','planner.html','auth.js','transport.js','account-storage.js','app.js','route-engine.js','config.js','sw.js','manifest.webmanifest','icon-192.png','icon-512.png'])hash.update(name).update(readFileSync(out+'/'+name));
 const version=hash.digest('hex').slice(0,16);
 writeFileSync(out+'/config.js',readFileSync(out+'/config.js','utf8')+'window.PLANNER_ASSET_VERSION='+JSON.stringify(version)+';\n');
 for(const name of ['index.html','planner.html']){

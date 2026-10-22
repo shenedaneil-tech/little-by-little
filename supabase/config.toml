@@ -1,3 +1,7 @@
 [functions.planner]
 # The handler verifies JWTs with Auth getUser; gateway JWT verification does not support all key formats.
 verify_jwt = false
+
+[functions.notifications]
+# Verifies user JWTs through Auth; scheduler requires its separate Vault secret.
+verify_jwt = false

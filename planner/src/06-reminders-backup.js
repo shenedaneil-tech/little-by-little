@@ -1,16 +1,4 @@
 // Reminders, backup/restore and calendar (.ics) import/export
-async function notifications() {
-  if (!('Notification' in window)) return toast('This browser does not support notifications.');
-  const p = await Notification.requestPermission();
-  state.notify = p === 'granted';
-  save();
-  render();
-  toast(
-    p === 'granted'
-      ? 'Reminders enabled while this page is open.'
-      : 'You can allow notifications in your browser settings.'
-  );
-}
 let nudged = new Set();
 setInterval(() => {
   const currentDay = dayKey();
@@ -29,10 +17,7 @@ setInterval(() => {
     if (nudged.has(key)) continue;
     nudged.add(key);
     toast('Time for: ' + t.title);
-    if ('Notification' in window && Notification.permission === 'granted')
-      new Notification('Your next little thing', {
-        body: t.title + ' · ' + t.duration + ' minutes'
-      });
+
   }
 }, 1000);
 function download(text, name, type) {

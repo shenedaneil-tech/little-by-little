@@ -64,3 +64,5 @@ standalone/data/
 pages-dist/
 
 *.tsbuildinfo
+
+/supabase/.temp/
