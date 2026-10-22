@@ -180,7 +180,7 @@ function setupSimplePlace(t) {
       input.value = state.startingAddress || 'Home';
       input.dataset.name = 'Home';
       writeCoords(input, state.startingCoords);
-      estimate();
+      input.dispatchEvent(new Event('place-selected'));
     };
   if (t.locationCoords) estimate();
   else if (!livePosition) {

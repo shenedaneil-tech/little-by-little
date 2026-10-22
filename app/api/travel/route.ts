@@ -4,7 +4,7 @@ export async function POST(req: Request) {
  if (!await getChatGPTUser()) return Response.json({error:'Sign in to estimate your journey.'},{status:401});
  if(req.headers.get('origin')!==new URL(req.url).origin)return Response.json({error:'Invalid origin'},{status:403});
  try {
- const {origin,destination}=await req.json();
+ const {origin,destination}=await req.json() as {origin:{lat:number,lon:number},destination:{lat:number,lon:number}};
  const valid=(p:any)=>p&&Number.isFinite(p.lat)&&Math.abs(p.lat)<=90&&Number.isFinite(p.lon)&&Math.abs(p.lon)<=180;
  if(!valid(origin)||!valid(destination))return Response.json({error:'Select a starting address and destination from the suggestions first.'},{status:400});
  const coordinates=`${origin.lon},${origin.lat};${destination.lon},${destination.lat};${origin.lon},${origin.lat}`;

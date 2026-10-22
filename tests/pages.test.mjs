@@ -41,3 +41,15 @@ test('Free backend verifies identities, isolates accounts, validates saves, and 
  assert.equal((await request('planner',{method:'POST',body:{state:{...state,tasks:[{...state.tasks[0],duration:-1}]},revision:1}})).status,400);
  assert.equal((await request('unknown')).status,404);
 });
+
+test('Edge routing accepts gateway-rewritten and full public paths for every endpoint',async()=>{
+ const source=readFileSync('supabase/functions/planner/index.ts','utf8').replace(/^import .*;\s*$/gm,'').replace('export async function dispatch','async function dispatch');
+ const dispatch=new Function('createClient','createDatabaseAdapter','Deno',stripTypeScriptTypes(source)+'\nreturn dispatch;')(()=>{},createDatabaseAdapter,{serve(){}});
+ const client={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:null})})})})};
+ for(const prefix of ['/functions/v1/planner','/planner']) {
+  for(const [endpoint,method,status,body] of [['planner','GET',200],['addresses','GET',200],['journey','POST',400,{points:[]}],['travel','POST',400,{}]]) {
+   const req=new Request('https://example.supabase.co'+prefix+'/'+endpoint,{method,headers:{origin:'https://example.supabase.co','content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+   assert.equal((await dispatch(req,{id:'alice'},client)).status,status,prefix+'/'+endpoint);
+  }
+ }
+});

@@ -134,7 +134,7 @@ function setupHours() {
   // Choosing a place you've been to before fills in the hours you used last time.
   address.addEventListener('place-selected', () => {
     block.hidden = false;
-    const saved = recallHours(placeKey(address.dataset.name || address.value));
+    const saved = recallHours(placeKey(address.value));
     if (!saved || touched) return;
     form.querySelector('input[name=hoursMode][value=set]').checked = true;
     opens.value = saved.opens;

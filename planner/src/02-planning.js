@@ -53,14 +53,27 @@ async function routingInputs(tasks, events) {
       return i;
     };
   const located = [...tasks, ...events].some(t => t.locationCoords);
+  let originLabel = 'Your current location';
   if (located) {
-    if (!livePosition || Date.now() - livePosition.captured > 120000) {
-      const p = await getCurrentPosition();
-      if (p.accuracy > 1000)
-        throw Error('Your location is too approximate. Try location access on your phone.');
-      livePosition = { lat: p.lat, lon: p.lon, captured: Date.now(), accuracy: p.accuracy };
+    let origin;
+    if (date !== dayKey() && state.startingCoords) {
+      origin = state.startingCoords;
+      originLabel = state.startingAddress || 'Your saved starting address';
+    } else {
+      try {
+        if (!livePosition || Date.now() - livePosition.captured > 120000) {
+          const p = await getCurrentPosition();
+          if (p.accuracy > 1000) throw Error('Your location is too approximate. Try location access on your phone.');
+          livePosition = { lat: p.lat, lon: p.lon, captured: Date.now(), accuracy: p.accuracy };
+        }
+        origin = livePosition;
+      } catch (error) {
+        if (!state.startingCoords) throw error;
+        origin = state.startingCoords;
+        originLabel = state.startingAddress || 'Your saved starting address';
+      }
     }
-    add(livePosition);
+    add(origin);
   } else add({ lat: 0, lon: 0 });
   const mapTask = t => ({
     ...t,
@@ -84,7 +97,7 @@ async function routingInputs(tasks, events) {
   for (const t of inputTasks)
     if (t.routeIndex != null)
       liveEtas[t.id] = { minutes: matrix[0]?.[t.routeIndex] ?? null, at: Date.now() };
-  return { inputTasks, inputEvents, matrix };
+  return { inputTasks, inputEvents, matrix, originLabel };
 }
 async function plan(options = {}) {
   if (routeBusy) {
@@ -112,7 +125,7 @@ async function plan(options = {}) {
   lastRouteAt = Date.now();
   if (!options.auto) toast('Finding a sensible route between your stops…');
   try {
-    const { inputTasks, inputEvents, matrix } = await routingInputs(tasks, events);
+    const { inputTasks, inputEvents, matrix, originLabel } = await routingInputs(tasks, events);
     if (
       generation !== routeGeneration ||
       planningDate !== date ||
@@ -128,6 +141,7 @@ async function plan(options = {}) {
     )
       return;
     const result = DayPlanner.buildDayPlan({
+      originLabel,
       tasks: inputTasks,
       events: inputEvents,
       matrix,
@@ -144,7 +158,12 @@ async function plan(options = {}) {
     lastRouteAt = Date.now();
     lastRoutePosition = livePosition ? { ...livePosition } : null;
     function apply(auto) {
-      if (invalid) return;
+      if (invalid && auto) return;
+      if (planningDate !== date || sourceStamp !== JSON.stringify({tasks: pending(), events: state.events.filter(e => e.date === date), energy: state.energy, start: state.start, end: state.end, buffer: state.buffer})) {
+        if (!auto) closeModal();
+        toast('Your day changed while this plan was open. Please plan again.');
+        return;
+      }
       const changed =
         JSON.stringify((state.eventTrips || []).filter(e => e.date === date)) !==
           JSON.stringify(result.eventTrips) ||
@@ -202,7 +221,7 @@ async function plan(options = {}) {
       return;
     }
     open(
-      `<h2>Your day, connected.</h2><p class="help">Each drive starts at your current location or the previous stop. Fixed times stay protected; nearby flexible errands can move earlier. We use the opening hours you’ve entered. Hours not supplied remain unverified.</p>${result.tasks.map(t => `<div class="task"><div class="task-info"><strong>${esc(t.title)}</strong><small>${t.at == null ? 'Not scheduled' : pretty(t.at) + ' – ' + pretty(t.at + t.duration)}${t.pinned ? ' · Fixed' : ''}</small>${t.at != null && t.travelBefore ? `<p class="help" style="margin:5px 0">Leave ${pretty(t.at - t.travelBefore)} · ${t.travelBefore} min from ${esc(t.routeFrom)}</p>` : ''}${t.issue ? `<p class="help" style="color:#96543c">${esc(t.issue)}</p>` : ''}${t.location && !t.closes && !t.noHours ? '<p class="help">Store hours aren’t verified. Add hours in Edit to constrain this visit.</p>' : ''}</div></div>`).join('')}${result.warnings.map(w => `<p class="note">${esc(w)}</p>`).join('')}<p class="help">Basic driving estimates · no live traffic. No return home is inserted unless you add a task there. Commitments without a location are treated as things you can do wherever you are.</p><div class="dialog-actions"><button onclick="closeModal()">Keep current plan</button><button class="primary" id="apply-plan" ${invalid ? 'disabled' : ''}>Use this plan</button></div>`
+      `<h2>Your day, connected.</h2><p class="help">Each drive starts at your current location or the previous stop. Fixed times stay protected; nearby flexible errands can move earlier. We use the opening hours you’ve entered. Hours not supplied remain unverified.</p>${result.tasks.map(t => `<div class="task"><div class="task-info"><strong>${esc(t.title)}</strong><small>${t.at == null ? 'Not scheduled' : pretty(t.at) + ' – ' + pretty(t.at + t.duration)}${t.pinned ? ' · Fixed' : ''}</small>${t.at != null && t.travelBefore ? `<p class="help" style="margin:5px 0">Leave ${pretty(t.at - t.travelBefore)} · ${t.travelBefore} min from ${esc(t.routeFrom)}</p>` : ''}${t.issue ? `<p class="help" style="color:#96543c">${esc(t.issue)}</p>` : ''}${t.location && !t.closes && !t.noHours ? '<p class="help">Store hours aren’t verified. Add hours in Edit to constrain this visit.</p>' : ''}</div></div>`).join('')}${result.warnings.map(w => `<p class="note">${esc(w)}</p>`).join('')}<p class="help">Basic driving estimates · no live traffic. No return home is inserted unless you add a task there. Commitments without a location are treated as things you can do wherever you are.</p><div class="dialog-actions"><button onclick="closeModal()">Keep current plan</button><button class="primary" id="apply-plan" >${invalid ? 'Use plan with warnings' : 'Use this plan'}</button></div>`
     );
     $('#apply-plan').onclick = () => apply(false);
   } catch (e) {

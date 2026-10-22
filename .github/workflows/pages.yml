@@ -7,6 +7,8 @@ on:
       - 'pages/**'
       - 'planner/**'
       - 'lib/day-plan.mjs'
+      - 'tests/**'
+      - 'scripts/planner-source.cjs'
       - 'scripts/build-pages.mjs'
       - '.github/workflows/pages.yml'
 permissions:
@@ -25,7 +27,7 @@ jobs:
         with:
           node-version: '24'
       - run: node scripts/build-edge.mjs
-      - run: node --test tests/pages.test.mjs tests/route-engine.test.mjs
+      - run: node --test tests/*.mjs tests/hours.test.cjs tests/location.test.cjs tests/motion.test.cjs tests/nearby.test.cjs tests/storage.test.cjs
       - name: Check database connection
         id: config
         env:

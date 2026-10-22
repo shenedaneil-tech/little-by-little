@@ -76,12 +76,14 @@ function edit(id) {
     }
     snapshot();
     if (x.location && hrs.mode !== 'closed')
-      rememberHours(placeKey(x.placeName || x.location), hrs.opens, hrs.closes);
+      rememberHours(placeKey(x.location), hrs.opens, hrs.closes);
     if (x.main) state.tasks.filter(v => v.date === x.date).forEach(v => (v.main = false));
     if (id) state.tasks[state.tasks.findIndex(v => v.id === id)] = x;
     else state.tasks.push(x);
     if (x.locationCoords && $('#place-eta').dataset.minutes)
       liveEtas[x.id] = { minutes: Number($('#place-eta').dataset.minutes), at: Date.now() };
+    invalidateRoute(t.date || x.date);
+    invalidateRoute(x.date);
     save();
     closeModal();
     render();
@@ -91,6 +93,8 @@ function edit(id) {
   if (id)
     $('#delete-task').onclick = () => {
       snapshot();
+      invalidateRoute(t.date);
+      if (running === id) running = null;
       state.tasks = state.tasks.filter(x => x.id !== id);
       save();
       closeModal();
@@ -106,6 +110,7 @@ function complete(id) {
   snapshot();
   const t = state.tasks.find(t => t.id === id);
   t.done = !t.done;
+  invalidateRoute(t.date);
   lastCompleted = t.done ? id : null;
   if (running === id) running = null;
   save();
@@ -133,7 +138,9 @@ function more(id) {
   }
   snapshot();
   task.duration += 10;
+  invalidateRoute(task.date);
   save();
+  render();
   plan();
 }
 function energy(e) {
@@ -150,9 +157,9 @@ function energy(e) {
   );
 }
 function lighter() {
-  let list = pending().filter(t => !t.main && t.priority !== 1);
+  let list = pending().filter(t => !t.main && t.priority !== 1 && !t.pinned);
   open(
-    `<h2>Let’s make today lighter.</h2><p class="help">Your essential tasks and main priority stay. Choose what can move to tomorrow.</p><form id="light">${list.map(t => `<label><input style="width:auto" type="checkbox" name="move" value="${t.id}" checked> ${esc(t.title)}</label>`).join('') || '<p>No flexible tasks to move. You can edit any task individually.</p>'}<div class="dialog-actions"><button type="button" onclick="closeModal()">Cancel</button><button class="primary">Move selected</button></div></form>`
+    `<h2>Let’s make today lighter.</h2><p class="help">Your essential tasks and main priority stay. Choose what can move to tomorrow.</p><form id="light">${list.map(t => `<label><input style="width:auto" type="checkbox" name="move" value="${esc(t.id)}" checked> ${esc(t.title)}</label>`).join('') || '<p>No flexible tasks to move. You can edit any task individually.</p>'}<div class="dialog-actions"><button type="button" onclick="closeModal()">Cancel</button><button class="primary">Move selected</button></div></form>`
   );
   $('#light').onsubmit = e => {
     e.preventDefault();
@@ -164,6 +171,8 @@ function lighter() {
         state.tasks.find(t => t.id === id),
         { date: dayKey(d), at: null, pinned: false }
       );
+    invalidateRoute(date);
+    if (running && !pending().some(t => t.id === running)) running = null;
     save();
     closeModal();
     render();
@@ -189,7 +198,8 @@ function startFocus(id) {
     toast('Paused. Take a breath.');
   } else {
     running = id;
-    elapsed = 0;
+    if (focusTask !== id) elapsed = 0;
+    focusTask = id;
     toast('One thing at a time. You’ve got room to start.');
   }
   render();
@@ -200,6 +210,7 @@ function fromDump() {
     .map(x => x.trim())
     .filter(Boolean);
   if (!lines.length) return toast('Write a thought or a task first.');
+  if (lines.some(title => title.length > 1000) || state.tasks.length + lines.length > 3000) return toast('Use shorter task names (up to 1,000 characters) and keep fewer than 3,000 tasks. Your notes are still here.');
   snapshot();
   for (const title of lines)
     state.tasks.push({
@@ -230,6 +241,9 @@ function eventForm() {
       start = mins(f.get('start')),
       end = mins(f.get('end'));
     if (end <= start) return toast('Choose an end time after the start.');
+    const eventDate = f.get('date');
+    const clash = [...state.events.filter(e => e.date === eventDate), ...state.tasks.filter(t => t.date === eventDate && !t.done && t.pinned && t.at != null).map(t => ({title: t.title, start: t.at, end: t.at + t.duration}))].find(e => start < e.end && end > e.start);
+    if (clash) return toast('This overlaps with ' + clash.title + '.');
     snapshot();
     state.events.push({
       id: crypto.randomUUID(),
@@ -240,14 +254,18 @@ function eventForm() {
       location: f.get('location').trim(),
       locationCoords: readCoords($('#event-address'))
     });
+    invalidateRoute(eventDate);
     save();
     closeModal();
     render();
+    if (eventDate === date) plan({ auto: true });
     toast('Commitment saved. Review your plan to adjust tasks around it.');
   };
 }
 function deleteEvent(id) {
   snapshot();
+  const event = state.events.find(e => e.id === id);
+  if (event) invalidateRoute(event.date);
   state.events = state.events.filter(e => e.id !== id);
   save();
   render();

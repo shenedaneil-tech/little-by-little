@@ -3,7 +3,7 @@ export const dynamic='force-dynamic';
 export async function POST(req:Request){
  if(!await getChatGPTUser())return Response.json({error:'Sign in to plan your journey.'},{status:401});
  if(req.headers.get('origin')!==new URL(req.url).origin)return Response.json({error:'Invalid origin'},{status:403});
- try{const {points}=await req.json();if(!Array.isArray(points)||points.length<2||points.length>40||points.some(p=>!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lon)||Math.abs(p.lat)>90||Math.abs(p.lon)>180))return Response.json({error:'Choose valid places for up to 39 stops.'},{status:400});
+ try{const {points}=await req.json() as {points:unknown};if(!Array.isArray(points)||points.length<2||points.length>40||points.some(p=>!p||!Number.isFinite(p.lat)||!Number.isFinite(p.lon)||Math.abs(p.lat)>90||Math.abs(p.lon)>180))return Response.json({error:'Choose valid places for up to 39 stops.'},{status:400});
  const url='https://router.project-osrm.org/table/v1/driving/'+points.map(p=>`${p.lon},${p.lat}`).join(';')+'?annotations=duration';
  const r=await fetch(url,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});if(!r.ok)throw Error();const d=await r.json() as any;
  if(d.code!=='Ok'||d.durations?.length!==points.length||d.durations.some((row:any)=>!Array.isArray(row)||row.length!==points.length))throw Error();

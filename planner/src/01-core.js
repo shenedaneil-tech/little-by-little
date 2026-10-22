@@ -8,12 +8,13 @@ const $ = s => document.querySelector(s),
     );
 const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const today = dayKey();
+let today = dayKey();
 let date = today,
   view = 'today',
   history = [],
   running = null,
-  elapsed = 0;
+  elapsed = 0,
+  focusTask = null;
 let livePosition = null,
   liveEtas = {},
   locationWatch = null,
@@ -75,6 +76,14 @@ const save = () => {
   }
   if (cloudReady) queueCloud();
 };
+function invalidateRoute(day) {
+  state.eventTrips = (state.eventTrips || []).filter(e => e.date !== day);
+  for (const task of state.tasks.filter(t => t.date === day)) {
+    task.travelBefore = 0; task.travelAfter = 0; task.planIssue = '';
+    delete liveEtas[task.id];
+  }
+  routeGeneration++;
+}
 const snapshot = () => {
   history.push(JSON.stringify(state));
   if (history.length > 30) history.shift();
@@ -102,3 +111,5 @@ const mins = t => Number(t.split(':')[0]) * 60 + Number(t.split(':')[1]),
       hour: 'numeric',
       minute: '2-digit'
     });
+
+const jsArg = value => esc(JSON.stringify(String(value)));

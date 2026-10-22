@@ -62,3 +62,5 @@ standalone/data/
 *.sqlite-shm
 *.sqlite-wal
 pages-dist/
+
+*.tsbuildinfo

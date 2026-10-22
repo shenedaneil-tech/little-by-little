@@ -1,3 +1,4 @@
+let cloudLoading = false;
 // Startup and account sync: first render, saving to the cloud, recovery
 document.querySelectorAll('nav button').forEach(
   b =>
@@ -14,9 +15,11 @@ function cloudStatus(text) {
   $('#saved').textContent = text;
 }
 function queueCloud() {
+  if (cloudBlocked) { cloudStatus('Changed elsewhere · click to resolve'); return; }
   const payload = JSON.stringify(state);
   if (payload === lastQueued) {
     if (!cloudDirty && !cloudBusy) cloudStatus('Saved to your account ✓');
+    else if (cloudDirty && !cloudBusy) cloudStatus('Not synced · click to retry');
     return;
   }
   lastQueued = payload;
@@ -65,6 +68,8 @@ async function pushCloud() {
   }
 }
 async function bootCloud() {
+  if (cloudLoading) return;
+  cloudLoading = true;
   cloudStatus('Loading your saved planner…');
   document.body.classList.add('sync-loading');
   try {
@@ -83,22 +88,11 @@ async function bootCloud() {
       } else {
         const old = state;
         state = { ...defaults, ...data.state };
-        if (!plannerStorage.getItem(marker)) {
-          for (const kind of ['tasks', 'events'])
-            for (const item of old[kind])
-              if (!state[kind].some(t => t.id === item.id)) {
-                state[kind].push(item);
-                needsSave = true;
-              }
-          if (old.dump && old.dump !== state.dump) {
-            state.dump = [state.dump, old.dump].filter(Boolean).join('\n');
-            needsSave = true;
-          }
-        } else if (localPending) {
+        // A newer account revision is authoritative, including deletions. Keep
+        // unsynced edits recoverable instead of silently resurrecting removed items.
+        if (localPending) {
           plannerStorage.setItem('lbl-recovery-copy', JSON.stringify(old));
-          toast(
-            'Loaded your latest account planner. An unsynced device copy is available in My rhythm.'
-          );
+          toast('Loaded your latest account planner. An unsynced device copy is available in My rhythm.');
         }
       }
     } else needsSave = true;
@@ -116,6 +110,7 @@ async function bootCloud() {
       'Couldn’t load your account planner. Your device copy is available. Changes will stay here until you reconnect.'
     );
   } finally {
+    cloudLoading = false;
     document.body.classList.remove('sync-loading');
     if (cloudReady && plannerStorage.getItem('lbl-nearby-enabled') === '1') {
       nearbyEnabled = true;

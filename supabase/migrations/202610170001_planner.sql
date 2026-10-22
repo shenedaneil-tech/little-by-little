@@ -6,12 +6,16 @@ create table if not exists public.planners (
 );
 alter table public.planners enable row level security;
 revoke all on public.planners from anon, authenticated;
-grant select on public.planners to authenticated;
+grant select, insert on public.planners to authenticated;
+grant update (state, revision, updated_at) on public.planners to authenticated;
 create policy "Read own planner" on public.planners for select to authenticated using ((select auth.uid()) = user_id);
 
--- Writes go through this compare-and-swap function. Callers cannot supply another user's ID.
+create policy "Insert own planner" on public.planners for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "Update own planner" on public.planners for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+-- Atomic compare-and-swap under the caller's RLS policies. No elevated privileges.
 create or replace function public.save_planner(p_state jsonb,p_revision integer)
-returns boolean language plpgsql security definer set search_path = '' as $$
+returns boolean language plpgsql security invoker set search_path = '' as $$
 declare caller uuid := auth.uid(); changed integer;
 begin
  if caller is null then raise exception 'Authentication required'; end if;

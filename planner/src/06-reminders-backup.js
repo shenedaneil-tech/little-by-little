@@ -13,6 +13,8 @@ async function notifications() {
 }
 let nudged = new Set();
 setInterval(() => {
+  const currentDay = dayKey();
+  if (currentDay !== today) { const wasToday = date === today; today = currentDay; if (wasToday) date = currentDay; render(); }
   if (running) {
     elapsed++;
     if ($('#timer'))
@@ -48,29 +50,16 @@ async function restore(file) {
   if (!file) return;
   try {
     const s = JSON.parse(await file.text());
-    if (
-      !Array.isArray(s.tasks) ||
-      !Array.isArray(s.events) ||
-      !/^\d\d:\d\d$/.test(s.start) ||
-      !/^\d\d:\d\d$/.test(s.end) ||
-      !Number.isFinite(s.buffer) ||
-      s.tasks.some(
-        t =>
-          typeof t.title !== 'string' ||
-          !Number.isFinite(t.duration) ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(t.date)
-      ) ||
-      s.events.some(
-        e => typeof e.title !== 'string' || !Number.isFinite(e.start) || !Number.isFinite(e.end)
-      )
-    )
-      throw Error();
+    if (!validBackup(s)) throw Error();
     open(
-      '<h2>Restore your backup?</h2><p class="help">This replaces the planner on this device. You can undo the restore.</p><div class="dialog-actions"><button onclick="closeModal()">Cancel</button><button class="primary" id="restore-confirm">Restore</button></div>'
+      '<h2>Restore your backup?</h2><p class="help">This replaces your account planner and syncs to your other devices. Download a backup first if needed. You can undo the restore.</p><div class="dialog-actions"><button onclick="closeModal()">Cancel</button><button class="primary" id="restore-confirm">Restore</button></div>'
     );
     $('#restore-confirm').onclick = () => {
       snapshot();
       state = { ...defaults, ...s, notify: false };
+      running = null; focusTask = null; elapsed = 0;
+      liveEtas = {};
+      routeGeneration++;
       save();
       closeModal();
       render();
@@ -183,4 +172,14 @@ async function importIcs(file) {
   } catch {
     toast('Could not read this calendar file.');
   }
+}
+
+function validBackup(s) {
+  const time = v => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+  const date = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v+'T12:00:00')) && dayKey(new Date(v+'T12:00:00')) === v;
+  const text = v => typeof v === 'string' && v.length > 0 && v.length <= 1000;
+  const coords = p => p == null || Number.isFinite(p.lat) && Math.abs(p.lat) <= 90 && Number.isFinite(p.lon) && Math.abs(p.lon) <= 180;
+  if (!s || !Array.isArray(s.tasks) || !Array.isArray(s.events) || s.tasks.length > 3000 || s.events.length > 3000 || typeof s.dump !== 'string' || !time(s.start) || !time(s.end) || mins(s.end) <= mins(s.start) || !Number.isFinite(s.buffer) || s.buffer < 0 || s.buffer > 120 || !coords(s.startingCoords)) return false;
+  for (const items of [s.tasks, s.events]) if (new Set(items.map(t => t?.id)).size !== items.length) return false;
+  return s.tasks.every(t => t && text(t.id) && text(t.title) && date(t.date) && Number.isInteger(t.duration) && t.duration >= 5 && t.duration <= 720 && (t.at == null || Number.isInteger(t.at) && t.at >= 0 && t.at + t.duration <= 1440) && (!t.opens || time(t.opens)) && (!t.closes || time(t.closes)) && [t.travelBefore,t.travelAfter].every(n => n == null || Number.isFinite(n) && n >= 0 && n <= 720) && coords(t.locationCoords)) && s.events.every(e => e && text(e.id) && text(e.title) && date(e.date) && Number.isInteger(e.start) && Number.isInteger(e.end) && e.start >= 0 && e.end <= 1440 && e.end > e.start && coords(e.locationCoords));
 }
