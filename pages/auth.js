@@ -21,7 +21,7 @@
    document.body.innerHTML=doc.body.innerHTML;
    const account=document.createElement('button');account.textContent='Sign out';account.style.cssText='margin:12px;min-height:44px';
    account.onclick=async()=>{account.disabled=true;const {error}=await client.auth.signOut();if(error){account.disabled=false;account.textContent='Sign out failed · retry';return}location.reload()};document.querySelector('.footer')?.appendChild(account);
-   for(const src of ['account-storage.js','route-engine.js','app.js'])await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.body.appendChild(s)});
+   for(const src of ['account-storage.js','route-engine.js','app.js'])await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src+'?v='+encodeURIComponent(window.PLANNER_ASSET_VERSION||'latest');s.onload=resolve;s.onerror=reject;document.body.appendChild(s)});
   }catch(e){loaded=false;if(document.getElementById('message'))tell(e.message||'Could not open the planner. Reload to try again.');else alert('Could not load the planner. Please reload.')}
  }
  client.auth.onAuthStateChange((event,session)=>{

@@ -1,5 +1,6 @@
 import {readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
 const {plannerSource}=createRequire(import.meta.url)('./planner-source.cjs');
 const out=process.env.PAGES_OUTPUT||'pages-dist';mkdirSync(out,{recursive:true});
 for(const name of ['index.html','auth.js','transport.js'])copyFileSync('pages/'+name,out+'/'+name);
@@ -14,3 +15,14 @@ if(key&&!(key.startsWith('sb_publishable_')||key.startsWith('eyJ')))throw Error(
 if(key.startsWith('eyJ')){const payload=JSON.parse(Buffer.from(key.split('.')[1],'base64url').toString());if(payload.role!=='anon')throw Error('Never put a service-role key in a public website')}
 writeFileSync(out+'/config.js','window.PLANNER_CONFIG='+JSON.stringify({url,key}).replace(/</g,'\\u003c')+';\n');
 writeFileSync(out+'/.nojekyll','');
+
+// GitHub Pages caches scripts for ten minutes. Give each complete release a
+// content-based URL so a fresh page cannot mix older scripts with newer markup.
+const hash=createHash('sha256');
+for(const name of ['index.html','planner.html','auth.js','transport.js','account-storage.js','app.js','route-engine.js','config.js'])hash.update(name).update(readFileSync(out+'/'+name));
+const version=hash.digest('hex').slice(0,16);
+writeFileSync(out+'/config.js',readFileSync(out+'/config.js','utf8')+'window.PLANNER_ASSET_VERSION='+JSON.stringify(version)+';\n');
+for(const name of ['index.html','planner.html']){
+ const markup=readFileSync(out+'/'+name,'utf8').replace(/src="([a-z-]+\.js)"/g,(_,src)=>'src="'+src+'?v='+version+'"');
+ writeFileSync(out+'/'+name,markup);
+}
