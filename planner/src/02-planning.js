@@ -38,8 +38,12 @@ function blocks() {
       ])
   ].sort((a, b) => a.start - b.start);
 }
-function nearbyPanel() {
-  return `<div class="card nearby"><h2>${nearbyEnabled ? 'Following your day' : 'Let’s connect the stops.'}</h2><p class="help" id="nearby-status">${esc(nearbyMessage || 'Choose stores by name. I’ll estimate each drive and group your stops without sending you home between errands.')}</p><p class="help">Location updates work while this page is visible. Driving estimates exclude live traffic.</p><div class="row"><button class="${nearbyEnabled ? 'outline' : 'primary'}" onclick="toggleNearby()">${nearbyEnabled ? 'Pause location updates' : 'Enable nearby planning'}</button><button class="outline" onclick="plan()">Refresh my route</button></div></div>`;
+function nearbyPanel(settings = false) {
+  // Once this device has a preference, keep the day clear and manage it in My rhythm.
+  let configured = nearbyEnabled;
+  try { configured = configured || plannerStorage.getItem('lbl-nearby-enabled') != null; } catch {}
+  if (!settings && configured) return '';
+  return `<div class="card nearby"><h2>${settings ? 'Nearby planning' : 'Let’s connect the stops.'}</h2><p class="help" id="nearby-status">${esc(nearbyMessage || 'Choose stores by name. I’ll estimate each drive and group your stops without sending you home between errands.')}</p><p class="help">Location updates work while this page is visible. Driving estimates exclude live traffic.</p><div class="row"><button class="${nearbyEnabled ? 'outline' : 'primary'}" onclick="toggleNearby()" aria-pressed="${nearbyEnabled}">${nearbyEnabled ? 'Pause location updates' : 'Enable nearby planning'}</button><button class="outline" onclick="plan()">Refresh my route</button></div></div>`;
 }
 async function routingInputs(tasks, events) {
   const points = [],
